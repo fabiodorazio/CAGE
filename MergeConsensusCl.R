@@ -1,5 +1,8 @@
 ### merge two consensus clusters based on granges overlap
+library(CAGEr)
+library(GenomicRanges)
 
+##load CAGEr object and aggregate tag clusters
 myCAGEsetConsensus <- readRDS('CAGEset_PGC_soma_Early_Late.rds')
 aggregateTagClusters(myCAGEsetConsensus)
 
@@ -11,7 +14,7 @@ iqs <- lapply(sample.names, function(x){
   return(tc)
 })
 
-iqs_PGC <- iqs[c(1,3)] ## subset only early and late PGCs
+iqs_PGC <- iqs[c(1,3)] ## subset 
 iqs_earlyPGC <- GRanges(as.data.frame(iqs_PGC[1]))
 iqs_latePGC <- GRanges(as.data.frame(iqs_PGC[2]))
 
