@@ -2,12 +2,9 @@ library(BSgenome.Drerio.UCSC.danRer10)
 library(CAGEr)
 library(GenomicRanges)
 
-setwd("/mnt/storage/dunja/danRer10CAGE/cage_bams/")
 paths <- grep(list.files(), pattern = "bowtiemapping.bam", value = T)
 
-
 names <- c("high","prim5")
-
 paths <- paths[c(6,12)]
 
 #####################################################
@@ -16,16 +13,6 @@ paths <- paths[c(6,12)]
 danRer10CAGEset <- new("CAGEset", genomeName = "BSgenome.Drerio.UCSC.danRer10", inputFiles = paths, inputFilesType = "bam", 
                        sampleLabels = names)
 getCTSS(danRer10CAGEset)
-
-setwd("/mnt/biggles/csc_projects/dunja/PGC_Fabio/newRun/")
-path.to.bam <- "/mnt/biggles/csc_projects/dunja/PGC_Fabio/newRun/"
-inputFiles = list.files(pattern = "\\.sorted.bam$")
-
-
-myCAGEsetPGC <- new("CAGEset", genomeName = "BSgenome.Drerio.UCSC.danRer10",
-                  inputFiles = inputFiles, inputFilesType = "bam",
-                  sampleLabels = sub(".sorted.bam", "", basename(inputFiles)))
-getCTSS(myCAGEsetPGC)
 
 ## check correlation between samples
 run_cage_r <- function(myCAGEset2){
@@ -67,5 +54,3 @@ evaluate_threshold_quality <- function(x){
   }  
   return(list1)
 }
-
-test1 <- evaluate_threshold_quality(list_cage)
