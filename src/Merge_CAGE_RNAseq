@@ -23,9 +23,6 @@ for(element in 1:length(all_files_rna)){
   names(all_files_rna)[element] <- strsplit(files[element], '\\.')[[1]][1]
 }
 
-# select prim5 samples
-sample.names <- unname(sampleLabels(myCAGEset)[c(3,6)])
-names.embryo <- unname(sampleLabels(CAGEsetEmbryo))
 
 ## load Tx data
 txdb <-loadDb('~/Desktop/Postdoc/Data_Analysis/annotation/txdb_DanRer7.sqlite')
