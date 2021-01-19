@@ -1,0 +1,77 @@
+#### SUBSET TSS BASED ON DIFF GENE EXPRESSION ####
+library(AnnotationDbi)
+library(purrr)
+library(ChIPseeker)
+library(ChIPpeakAnno)
+library(GenomicFeatures)
+library(dplyr)
+
+setwd("../Data_Analysis/CAGEsets/")
+danRer7CAGEset <- readRDS("CAGEsetPGCsomaEarlyLateMerged.replicates.rsd")
+
+setwd('../../2108/RNAseqtables/Diff_Expressed_Genes/')
+
+
+## read differential expression txt files
+files <- list.files()
+.my_function <- function(file){
+  x <- read.csv(file, sep = '\t')
+}
+all_files_rna <- lapply(files, .my_function)
+
+for(element in 1:length(all_files_rna)){
+  names(all_files_rna)[element] <- strsplit(files[element], '\\.')[[1]][1]
+}
+
+# select prim5 samples
+sample.names <- unname(sampleLabels(myCAGEset)[c(3,6)])
+names.embryo <- unname(sampleLabels(CAGEsetEmbryo))
+
+## load Tx data
+txdb <-loadDb('~/Desktop/Postdoc/Data_Analysis/annotation/txdb_DanRer7.sqlite')
+txdb7 <- toGRanges(txdb)
+
+## merge deseq table with gene coordinates
+## matches DGE class and logFoldChange with gene coordinates
+merge.with.coordinates <- function(x,y){
+  deseq.coordinates <- merge(as.data.frame(txdb7), x, by = 0) %>%
+    mutate(cc_id = paste(seqnames,start,end,width,strand,sep = "_"))
+  deseq.res.gr <- GRanges(seqnames = deseq.coordinates$seqnames,
+                          ranges = IRanges(start = deseq.coordinates$start,
+                                           end = deseq.coordinates$end),
+                          strand = deseq.coordinates$strand)
+  values(deseq.res.gr) <- deseq.coordinates[,1:ncol(deseq.coordinates)]
+  
+  # extract tss
+  a <- tagClusters(danRer7CAGEset, sample = y, returnInterquantileWidth = TRUE, qLow = 0.1, qUp = 0.9)
+  a <- a[a$chr %in% paste("chr",1:25, sep = ""),]
+  a$sampleID <- y
+  a <- mutate(a, promoterID = paste(chr,start,end,strand, sep = "_"))
+  a <- annotatePeak(GRanges(a), TxDb=txdb, tssRegion=c(-1000, 100), verbose=FALSE, 
+                    sameStrand = TRUE)
+  gr <- a@anno
+  gr <- subset(gr, gr$annotation == 'Promoter')
+  
+  merge.rnaseq.tss <- function(x, y){
+    # determine all overlaps and have granges map to TC coordinates
+    hits <- findOverlaps(x,y)
+    x_sub <- x[queryHits(hits)]
+    y_sub <- y[subjectHits(hits)]
+    tc_deseq <- x_sub
+    values(tc_deseq) <- cbind(values(tc_deseq), values(y_sub))
+    # keep only highest:
+    df <- tibble::as_tibble(data.frame(promoterID = tc_deseq$promoterID,
+                            tpm = tc_deseq$tpm,
+                            cc_id = tc_deseq$cc_id)) %>%
+      group_by(cc_id) %>%
+      dplyr::slice(which.max(tpm))
+    # select only these promoterIDs
+    sel <- which(tc_deseq$promoterID %in% df$promoterID & tc_deseq$cc_id %in% df$cc_id)	
+    return(tc_deseq[sel])
+  }
+  tcs_res <- merge.rnaseq.tss(x = gr, y = deseq.res.gr)
+
+  return(tcs_res)
+}
+
+merged_datasets <- lapply(all_files_rna, merge.with.coordinates, y = unname(danRer7CAGEset@sampleLabels)[1])
