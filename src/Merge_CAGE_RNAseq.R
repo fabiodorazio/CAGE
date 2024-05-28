@@ -10,6 +10,7 @@ library(ChIPseeker)
 library(ChIPpeakAnno)
 library(GenomicFeatures)
 library(dplyr)
+library(BSgenome.Drerio.UCSC.danRer7)
 
 danRer7CAGEset <- readRDS("CAGEsetPGCsomaEarlyLateMerged.replicates.rsd")
 
@@ -27,7 +28,7 @@ files <- c('DownregulatedInSomaOnly_Prim5vs10somites.txt',
            'UpregulatedInPGCsVSsomaAtprim5AndFromDome.txt',
            'UpregulatedinPGCsFromDomeToPrim5.txt')
 
-.my_function <- function(file){
+.prepare_data <- function(file){
   x <- read.csv(file, sep = '\t')
   x_subset <- subset(x, abs(x$log2FoldChange) > 2)
   if('X' %in% colnames(x)){
@@ -39,7 +40,7 @@ files <- c('DownregulatedInSomaOnly_Prim5vs10somites.txt',
   }
   return(x_subset)
 }
-all_files_rna <- lapply(files, .my_function)
+all_files_rna <- lapply(files, .prepare_data)
 #name elements
 for(element in 1:length(all_files_rna)){
   names(all_files_rna)[element] <- strsplit(files[element], '\\.')[[1]][1]
@@ -92,10 +93,12 @@ merge.with.coordinates <- function(x,y){
   return(tcs_res)
 }
 
-PGC_high_CAGE <- lapply(all_files_rna, merge.with.coordinates, y = unname(danRer7CAGEset@sampleLabels)[1])
-Soma_high_CAGE <- lapply(all_files_rna, merge.with.coordinates, y = unname(danRer7CAGEset@sampleLabels)[2])
-PGC_prim5_CAGE <- lapply(all_files_rna, merge.with.coordinates, y = unname(danRer7CAGEset@sampleLabels)[3])
-Soma_prim5_CAGE <- lapply(all_files_rna, merge.with.coordinates, y = unname(danRer7CAGEset@sampleLabels)[4])
+if (!interactive()){
+    PGC_high_CAGE <- lapply(all_files_rna, merge.with.coordinates, y = unname(danRer7CAGEset@sampleLabels)[1])
+    Soma_high_CAGE <- lapply(all_files_rna, merge.with.coordinates, y = unname(danRer7CAGEset@sampleLabels)[2])
+    PGC_prim5_CAGE <- lapply(all_files_rna, merge.with.coordinates, y = unname(danRer7CAGEset@sampleLabels)[3])
+    Soma_prim5_CAGE <- lapply(all_files_rna, merge.with.coordinates, y = unname(danRer7CAGEset@sampleLabels)[4])
+}
 
 
 ## order by iq_width 
@@ -108,7 +111,6 @@ my.deg.list <- lapply(PGC_prim5_CAGE, order_by_iqwidt)
 
 
 # plot
-library(BSgenome.Drerio.UCSC.danRer7)
 .retrieveSequences <- function(x, range = c(400,400), SeqLengths, bs_genome, remove.na = FALSE){
   x <- data.frame(x)
   x <- x[sample(1:nrow(x), nrow(x)),] # rewrite x by shuffle sequences 
@@ -275,7 +277,7 @@ ggplot(df_ww_plot, aes(x=Index, y=Occurence, Group=factor(Sample))) +
 
 ######### PLOT CHROMATIN
 ## chromatin
-setwd('~/Desktop/Postdoc/Data_Analysis/ATACseq/')
+setwd('../Data_Analysis/ATACseq/')
 files <- list.files(pattern = "\\.danRer7.sorted.goodChr.bam$")
 atac.file.names <- files[c(1,2)]
 #atac.pgc <- files[grep('PGC', files)]
